@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1B1F27">
+<title>Requisição Almoxarifado</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600&family=JetBrains+Mono:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js"></script>
+<style>
+  :root{
+    --bg:#1B1F27;
+    --panel:#262B35;
+    --panel-2:#2F3542;
+    --border:#3A4150;
+    --border-strong:#4C5568;
+    --text:#ECE8DE;
+    --text-dim:#9BA3B0;
+    --steel:#3E6DA8;
+    --steel-dark:#2C517E;
+    --amber:#E3A23C;
+    --amber-dark:#8A5F1E;
+    --rust:#D1752E;
+    --rust-bg:#3A2A1C;
+    --ok:#4C8C6B;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:'Inter',sans-serif;
+    min-height:100vh;
+    padding-bottom:40px;
+  }
+  header{
+    padding:22px 18px 16px;
+    border-bottom:1px solid var(--border);
+  }
+  .tag-icon{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:34px; height:34px; border-radius:6px;
+    background:var(--steel-dark); color:var(--text); font-size:18px;
+    margin-right:10px; flex-shrink:0;
+  }
+  h1{
+    font-family:'Oswald',sans-serif; font-weight:600; font-size:19px;
+    letter-spacing:0.5px; text-transform:uppercase; margin:0;
+    display:flex; align-items:center;
+  }
+  .sub{
+    font-size:12px; color:var(--text-dim); margin:6px 0 0 44px;
+  }
+  main{ padding:16px; max-width:480px; margin:0 auto; }
+
+  .card{
+    background:var(--panel); border:1px solid var(--border);
+    border-radius:10px; padding:14px; margin-bottom:16px;
+  }
+  .card-label{
+    font-size:11px; text-transform:uppercase; letter-spacing:1px;
+    color:var(--text-dim); margin-bottom:10px; font-weight:600;
+  }
+  .row{ display:flex; gap:8px; }
+  .row + .row{ margin-top:8px; }
+  input{
+    background:var(--panel-2); border:1px solid var(--border-strong);
+    color:var(--text); border-radius:7px; padding:11px 12px;
+    font-size:15px; font-family:'JetBrains Mono',monospace;
+    width:100%; outline:none;
+  }
+  input::placeholder{ color:#6b7280; font-family:'Inter',sans-serif; }
+  input:focus{ border-color:var(--steel); }
+  #codigo{ flex:1.4; text-transform:uppercase; }
+  #quantidade{ flex:0.8; font-family:'JetBrains Mono',monospace; }
+
+  button{ font-family:'Inter',sans-serif; cursor:pointer; border:none; }
+  .btn-add{
+    width:100%; margin-top:10px; padding:11px;
+    background:var(--panel-2); border:1px solid var(--border-strong);
+    color:var(--text); border-radius:7px; font-size:14px; font-weight:500;
+    display:flex; align-items:center; justify-content:center; gap:6px;
+  }
+  .btn-add:active{ background:var(--border); }
+
+  .err{ color:var(--rust); font-size:12px; margin-top:6px; display:none; }
+
+  .lista-label{
+    font-size:11px; text-transform:uppercase; letter-spacing:1px;
+    color:var(--text-dim); margin:4px 0 8px 2px; font-weight:600;
+  }
+  .empty-hint{
+    font-size:13px; color:var(--text-dim); padding:18px 4px;
+    text-align:center; border:1px dashed var(--border); border-radius:8px;
+  }
+
+  .etiqueta{
+    position:relative;
+    background:var(--panel); border:1px dashed var(--border-strong);
+    border-radius:6px; padding:12px 14px 14px;
+    margin-bottom:10px;
+    display:flex; justify-content:space-between; align-items:flex-start;
+  }
+  .etiqueta::before{
+    content:''; position:absolute; left:-1px; top:50%; transform:translateY(-50%);
+    width:10px; height:10px; border-radius:50%; background:var(--bg);
+    border:1px dashed var(--border-strong); border-right:none;
+  }
+  .et-codigo{
+    font-family:'JetBrains Mono',monospace; font-weight:600; font-size:16px;
+    color:var(--text); letter-spacing:0.5px;
+  }
+  .et-qtd{ font-size:13px; color:var(--amber); margin-top:4px; font-weight:500; }
+  .et-barcode{
+    margin-top:8px; height:14px; width:90px;
+    background:repeating-linear-gradient(90deg, var(--border-strong) 0 2px, transparent 2px 4px, var(--border-strong) 4px 5px, transparent 5px 8px);
+    opacity:0.6;
+  }
+  .et-remove{
+    background:none; color:var(--text-dim); font-size:18px; line-height:1;
+    padding:4px; border-radius:5px; flex-shrink:0;
+  }
+  .et-remove:active{ background:var(--panel-2); color:var(--rust); }
+
+  .btn-enviar{
+    width:100%; padding:14px; border-radius:9px;
+    background:var(--steel); color:#fff; font-size:15px; font-weight:600;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    letter-spacing:0.3px;
+  }
+  .btn-enviar:disabled{ background:var(--panel-2); color:var(--text-dim); }
+  .btn-enviar:active:not(:disabled){ background:var(--steel-dark); }
+
+  .pendente-banner{
+    background:var(--rust-bg); border:1px solid var(--rust);
+    border-radius:8px; padding:10px 12px; margin-top:14px;
+    display:none; align-items:center; justify-content:space-between; gap:10px;
+  }
+  .pendente-banner.show{ display:flex; }
+  .pendente-txt{ font-size:12.5px; color:#F0C4A0; flex:1; }
+  .btn-reenviar{
+    background:var(--rust); color:#2A1608; font-size:12px; font-weight:600;
+    padding:7px 10px; border-radius:6px; white-space:nowrap;
+  }
+
+  .historico-toggle{
+    background:none; color:var(--text-dim); font-size:13px;
+    padding:10px 2px; width:100%; text-align:left;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .hist-item{
+    border-top:1px solid var(--border); padding:10px 2px;
+    font-size:13px;
+  }
+  .hist-meta{ color:var(--text-dim); font-size:11.5px; margin-top:3px; }
+  .hist-status-enviado{ color:var(--ok); }
+  .hist-status-pendente{ color:var(--rust); }
+  #histLista{ display:none; }
+  #histLista.show{ display:block; }
+
+  .toast{
+    position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(20px);
+    background:var(--panel-2); border:1px solid var(--border-strong); color:var(--text);
+    padding:11px 18px; border-radius:8px; font-size:13.5px;
+    opacity:0; transition:opacity 0.25s, transform 0.25s; pointer-events:none;
+    max-width:88%; text-align:center; z-index:50;
+  }
+  .toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+  .row-op{ display:flex; gap:8px; }
+  .row-op input{ flex:1; }
+  .btn-scan{
+    flex-shrink:0; width:44px; height:44px;
+    background:var(--panel-2); border:1px solid var(--border-strong);
+    color:var(--text); border-radius:7px; font-size:18px;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .btn-scan:active{ background:var(--border); }
+
+  .scanner-overlay{
+    display:none; position:fixed; inset:0; background:#000;
+    z-index:100; flex-direction:column;
+  }
+  .scanner-overlay.show{ display:flex; }
+  .scanner-video-wrap{ position:relative; flex:1; overflow:hidden; }
+  #scannerVideo{ width:100%; height:100%; object-fit:cover; }
+  .scanner-frame{
+    position:absolute; left:10%; right:10%; top:38%; height:24%;
+    border:2px solid var(--amber); border-radius:8px;
+    box-shadow:0 0 0 2000px rgba(0,0,0,0.45);
+  }
+  .scanner-bar{
+    padding:14px 16px; background:#000;
+    display:flex; align-items:center; justify-content:space-between;
+    gap:10px;
+  }
+  .scanner-txt{ color:var(--text); font-size:13px; }
+  .btn-fechar-scanner{
+    background:var(--panel-2); color:var(--text); border:1px solid var(--border-strong);
+    border-radius:7px; padding:9px 14px; font-size:13px;
+  }
+</style>
+</head>
+<body>
+
+<div class="scanner-overlay" id="scannerOverlay">
+  <div class="scanner-video-wrap">
+    <video id="scannerVideo" autoplay muted playsinline></video>
+    <div class="scanner-frame"></div>
+  </div>
+  <div class="scanner-bar">
+    <span class="scanner-txt">Aponte a câmera pro código de barras da OP</span>
+    <button class="btn-fechar-scanner" id="btnFecharScanner">Cancelar</button>
+  </div>
+</div>
+
+
+<header>
+  <h1><span class="tag-icon">▤</span>Requisição Almoxarifado</h1>
+  <div class="sub">porcas e parafusos · envio por WhatsApp</div>
+</header>
+
+<main>
+  <div class="card">
+    <div class="card-label">novo item</div>
+    <div class="row">
+      <input id="codigo" type="text" placeholder="Código (ex: CCP0041)" autocomplete="off">
+      <input id="quantidade" type="number" inputmode="numeric" placeholder="Qtd" min="1">
+    </div>
+    <div class="row row-op">
+      <input id="op" type="text" inputmode="numeric" placeholder="Nº da OP" autocomplete="off">
+      <button class="btn-scan" id="btnScan" type="button" aria-label="Escanear código de barras">▤</button>
+    </div>
+    <div class="err" id="erroForm">Preencha código, quantidade e OP.</div>
+    <button class="btn-add" id="btnAdd">＋ Adicionar à requisição</button>
+  </div>
+
+  <div class="lista-label">itens desta requisição</div>
+  <div id="listaItens"></div>
+
+  <button class="btn-enviar" id="btnEnviar" disabled>Enviar por WhatsApp</button>
+
+  <div class="pendente-banner" id="pendBanner">
+    <span class="pendente-txt" id="pendTxt"></span>
+    <button class="btn-reenviar" id="btnReenviar">Reenviar</button>
+  </div>
+
+  <button class="historico-toggle" id="histToggle">
+    <span>Histórico de requisições</span>
+    <span id="histSeta">▾</span>
+  </button>
+  <div id="histLista"></div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const LS_ITENS = 'almox_itens_atual';
+  const LS_PENDENTES = 'almox_pendentes';
+  const LS_HISTORICO = 'almox_historico';
+
+  let itens = JSON.parse(localStorage.getItem(LS_ITENS) || '[]');
+
+  const listaItens = document.getElementById('listaItens');
+  const btnEnviar = document.getElementById('btnEnviar');
+  const erroForm = document.getElementById('erroForm');
+  const codigoInput = document.getElementById('codigo');
+  const qtdInput = document.getElementById('quantidade');
+  const opInput = document.getElementById('op');
+
+  function salvarItensAtuais(){
+    localStorage.setItem(LS_ITENS, JSON.stringify(itens));
+  }
+
+  function renderItens(){
+    listaItens.innerHTML = '';
+    if(itens.length === 0){
+      listaItens.innerHTML = '<div class="empty-hint">Nenhum item adicionado ainda</div>';
+      btnEnviar.disabled = true;
+      return;
+    }
+    btnEnviar.disabled = false;
+    itens.forEach((it, idx) => {
+      const div = document.createElement('div');
+      div.className = 'etiqueta';
+      div.innerHTML = `
+        <div>
+          <div class="et-codigo">${it.codigo}</div>
+          <div class="et-qtd">${it.quantidade} pçs · OP ${it.op}</div>
+          <div class="et-barcode"></div>
+        </div>
+        <button class="et-remove" data-idx="${idx}" aria-label="Remover item">×</button>
+      `;
+      listaItens.appendChild(div);
+    });
+    listaItens.querySelectorAll('.et-remove').forEach(btn=>{
+      btn.addEventListener('click', ()=>{
+        itens.splice(parseInt(btn.dataset.idx), 1);
+        salvarItensAtuais();
+        renderItens();
+      });
+    });
+  }
+
+  document.getElementById('btnAdd').addEventListener('click', ()=>{
+    const codigo = codigoInput.value.trim().toUpperCase();
+    const quantidade = qtdInput.value.trim();
+    const op = opInput.value.trim();
+    if(!codigo || !quantidade || Number(quantidade) <= 0 || !op){
+      erroForm.style.display = 'block';
+      return;
+    }
+    erroForm.style.display = 'none';
+    itens.push({codigo, quantidade, op});
+    salvarItensAtuais();
+    codigoInput.value = '';
+    qtdInput.value = '';
+    opInput.value = '';
+    codigoInput.focus();
+    renderItens();
+  });
+
+  function montarMensagem(lista){
+    const agora = new Date();
+    const data = agora.toLocaleDateString('pt-BR');
+    const hora = agora.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+    let msg = `📦 REQUISIÇÃO ALMOXARIFADO\n🗓 ${data} ${hora}\n\n`;
+    lista.forEach((it, i)=>{
+      msg += `${i+1}) ${it.codigo} — ${it.quantidade} pçs — OP ${it.op}\n`;
+    });
+    msg += `\nEnviado via App Requisição Almoxarifado`;
+    return msg;
+  }
+
+  function mostrarToast(texto){
+    const t = document.getElementById('toast');
+    t.textContent = texto;
+    t.classList.add('show');
+    setTimeout(()=> t.classList.remove('show'), 2600);
+  }
+
+  function getPendentes(){
+    return JSON.parse(localStorage.getItem(LS_PENDENTES) || '[]');
+  }
+  function salvarPendentes(lista){
+    localStorage.setItem(LS_PENDENTES, JSON.stringify(lista));
+  }
+  function getHistorico(){
+    return JSON.parse(localStorage.getItem(LS_HISTORICO) || '[]');
+  }
+  function salvarHistorico(lista){
+    localStorage.setItem(LS_HISTORICO, JSON.stringify(lista));
+  }
+
+  function atualizarBannerPendentes(){
+    const pend = getPendentes();
+    const banner = document.getElementById('pendBanner');
+    const txt = document.getElementById('pendTxt');
+    if(pend.length > 0){
+      banner.classList.add('show');
+      txt.textContent = pend.length === 1
+        ? '1 requisição pendente — sem internet no envio'
+        : `${pend.length} requisições pendentes — sem internet no envio`;
+    } else {
+      banner.classList.remove('show');
+    }
+  }
+
+  function abrirWhatsApp(mensagem){
+    const url = 'https://api.whatsapp.com/send?text=' + encodeURIComponent(mensagem);
+    window.open(url, '_blank');
+  }
+
+  function enviarRequisicao(){
+    if(itens.length === 0) return;
+    const mensagem = montarMensagem(itens);
+    const registro = {
+      itens: itens.slice(),
+      mensagem,
+      data: new Date().toISOString()
+    };
+
+    if(navigator.onLine){
+      abrirWhatsApp(mensagem);
+      const hist = getHistorico();
+      hist.unshift({...registro, status:'enviado'});
+      salvarHistorico(hist);
+      mostrarToast('Requisição enviada pelo WhatsApp');
+    } else {
+      const pend = getPendentes();
+      pend.push(registro);
+      salvarPendentes(pend);
+      atualizarBannerPendentes();
+      mostrarToast('Sem internet — requisição salva como pendente');
+    }
+
+    itens = [];
+    salvarItensAtuais();
+    renderItens();
+  }
+
+  btnEnviar.addEventListener('click', enviarRequisicao);
+
+  document.getElementById('btnReenviar').addEventListener('click', ()=>{
+    let pend = getPendentes();
+    if(pend.length === 0) return;
+    if(!navigator.onLine){
+      mostrarToast('Ainda sem internet — tente novamente mais tarde');
+      return;
+    }
+    const hist = getHistorico();
+    pend.forEach(reg=>{
+      abrirWhatsApp(reg.mensagem);
+      hist.unshift({...reg, status:'enviado'});
+    });
+    salvarHistorico(hist);
+    salvarPendentes([]);
+    atualizarBannerPendentes();
+    renderHistorico();
+    mostrarToast('Pendências reenviadas');
+  });
+
+  window.addEventListener('online', ()=>{
+    const pend = getPendentes();
+    if(pend.length > 0){
+      mostrarToast('Internet voltou — você tem requisições pendentes pra reenviar');
+    }
+  });
+
+  const histToggle = document.getElementById('histToggle');
+  const histLista = document.getElementById('histLista');
+  const histSeta = document.getElementById('histSeta');
+  let histAberto = false;
+
+  function renderHistorico(){
+    const hist = getHistorico();
+    if(hist.length === 0){
+      histLista.innerHTML = '<div class="hist-item">Nenhuma requisição enviada ainda.</div>';
+      return;
+    }
+    histLista.innerHTML = hist.slice(0, 30).map(h=>{
+      const d = new Date(h.data);
+      const dataFmt = d.toLocaleDateString('pt-BR') + ' ' + d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+      const itensTxt = h.itens.map(it => `${it.codigo} (${it.quantidade}, OP ${it.op})`).join(', ');
+      const statusClasse = h.status === 'enviado' ? 'hist-status-enviado' : 'hist-status-pendente';
+      const statusTxt = h.status === 'enviado' ? 'Enviado' : 'Pendente';
+      return `<div class="hist-item">
+        <div>${itensTxt}</div>
+        <div class="hist-meta">${dataFmt} · <span class="${statusClasse}">${statusTxt}</span></div>
+      </div>`;
+    }).join('');
+  }
+
+  histToggle.addEventListener('click', ()=>{
+    histAberto = !histAberto;
+    histLista.classList.toggle('show', histAberto);
+    histSeta.textContent = histAberto ? '▴' : '▾';
+    if(histAberto) renderHistorico();
+  });
+
+  renderItens();
+  atualizarBannerPendentes();
+
+  let codeReader = null;
+  const scannerOverlay = document.getElementById('scannerOverlay');
+  const scannerVideo = document.getElementById('scannerVideo');
+
+  function abrirScanner(){
+    if(typeof ZXing === 'undefined'){
+      mostrarToast('Leitor de código de barras não carregou. Verifique a internet.');
+      return;
+    }
+    scannerOverlay.classList.add('show');
+    codeReader = new ZXing.BrowserMultiFormatReader();
+    codeReader.decodeFromVideoDevice(undefined, scannerVideo, (result, err)=>{
+      if(result){
+        opInput.value = result.getText();
+        mostrarToast('Código lido: ' + result.getText());
+        fecharScanner();
+      }
+    }).catch(()=>{
+      mostrarToast('Não foi possível acessar a câmera.');
+      fecharScanner();
+    });
+  }
+
+  function fecharScanner(){
+    if(codeReader){
+      codeReader.reset();
+      codeReader = null;
+    }
+    scannerOverlay.classList.remove('show');
+  }
+
+  document.getElementById('btnScan').addEventListener('click', abrirScanner);
+  document.getElementById('btnFecharScanner').addEventListener('click', fecharScanner);
+</script>
+</body>
+</html>
