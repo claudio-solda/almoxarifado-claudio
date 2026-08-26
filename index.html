@@ -4,6 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#1B1F27">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Almoxarifado">
 <title>Requisição Almoxarifado</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -51,6 +58,19 @@
   .sub{
     font-size:12px; color:var(--text-dim); margin:6px 0 0 44px;
   }
+  .btn-instalar{
+    display:none; align-items:center; justify-content:center; gap:6px;
+    margin-top:14px; width:100%; padding:11px;
+    background:var(--amber); color:#3A2A0C; border-radius:8px;
+    font-size:14px; font-weight:600;
+  }
+  .btn-instalar.show{ display:flex; }
+  .ios-hint{
+    display:none; margin-top:14px; padding:10px 12px;
+    background:var(--panel-2); border:1px solid var(--border-strong);
+    border-radius:8px; font-size:12.5px; color:var(--text-dim);
+  }
+  .ios-hint.show{ display:block; }
   main{ padding:16px; max-width:480px; margin:0 auto; }
 
   .card{
@@ -217,6 +237,8 @@
 <header>
   <h1><span class="tag-icon">▤</span>Requisição Almoxarifado</h1>
   <div class="sub">porcas e parafusos · envio por WhatsApp</div>
+  <button class="btn-instalar" id="btnInstalar">⬇ Instalar app</button>
+  <div class="ios-hint" id="iosHint">No iPhone: toque em Compartilhar (□↑) e depois em "Adicionar à Tela de Início"</div>
 </header>
 
 <main>
@@ -493,6 +515,36 @@
 
   document.getElementById('btnScan').addEventListener('click', abrirScanner);
   document.getElementById('btnFecharScanner').addEventListener('click', fecharScanner);
+
+  let deferredPrompt = null;
+  const btnInstalar = document.getElementById('btnInstalar');
+
+  window.addEventListener('beforeinstallprompt', (e)=>{
+    e.preventDefault();
+    deferredPrompt = e;
+    btnInstalar.classList.add('show');
+  });
+
+  btnInstalar.addEventListener('click', async ()=>{
+    if(!deferredPrompt) return;
+    deferredPrompt.prompt();
+    const escolha = await deferredPrompt.userChoice;
+    if(escolha.outcome === 'accepted'){
+      mostrarToast('App instalado');
+    }
+    deferredPrompt = null;
+    btnInstalar.classList.remove('show');
+  });
+
+  window.addEventListener('appinstalled', ()=>{
+    btnInstalar.classList.remove('show');
+  });
+
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
+  if(isIOS && !isStandalone){
+    document.getElementById('iosHint').classList.add('show');
+  }
 </script>
 </body>
 </html>
